@@ -1,13 +1,13 @@
 import moment from "moment";
 import {ScheduleManager} from "./schedule-manager";
-import {DayBooking} from "./day-booking";
+import {DaySchedule, DayScheduleImpl} from "./day-schedule";
 import {BookingResult} from "./bookingResult";
 import {Booking} from "./booking";
 
 let bookingStorage_: Map<string, Booking> = new Map();
 
 export class BookingStorage {
-    static getAvailableSlots(weekNum: number): DayBooking[] {
+    static getAvailableSlots(weekNum: number): DaySchedule[] {
         let result = [];
         let iterDate = moment().utc()
             .week(weekNum)
@@ -24,20 +24,20 @@ export class BookingStorage {
             const openingHours = ScheduleManager.getOpeningHours(iterDate);
             let opening = openingHours[0];
             let closing = openingHours[1];
-            let dayBooking = {dayDate: moment(iterDate), slots: []};
+            let daySchedule = {dayDate: moment(iterDate), slots: []};
 
             // for each hour of the day
             for (let workingHour = opening; workingHour <= closing; workingHour++) {
                 let iterTime = moment(iterDate)
                     .hour(workingHour).minute(0).second(0).millisecond(0);
 
-                dayBooking.slots.push({
+                daySchedule.slots.push({
                     hour: workingHour,
                     available: !BookingStorage.checkBookingExists(iterTime)
                 });
             }
 
-            result.push(dayBooking);
+            result.push(daySchedule);
             iterDate = iterDate.add(1, 'd');
         }
 
@@ -61,7 +61,10 @@ export class BookingStorage {
             const openingHours = ScheduleManager.getOpeningHours(iterDate);
             let opening = openingHours[0];
             let closing = openingHours[1];
-            let dayBooking = {dayDate: moment(iterDate), slots: []};
+            let daySchedule: DaySchedule = new DayScheduleImpl(
+                moment(iterDate).toISOString(),
+                []
+            );
 
             // for each hour of the day
             for (let workingHour = opening; workingHour < closing; workingHour++) {
@@ -69,22 +72,23 @@ export class BookingStorage {
                     .hour(workingHour).minute(0).second(0).millisecond(0);
 
                 const booking = BookingStorage.getBooking(iterTime);
+                delete booking['bookingCode'];
 
                 if (booking) {
-                    dayBooking.slots.push({
+                    daySchedule.slots.push({
                         hour: workingHour,
                         available: false,
-                        booking: Booking,
+                        booking: booking,
                     });
                 } else {
-                    dayBooking.slots.push({
+                    daySchedule.slots.push({
                         hour: workingHour,
                         available: true,
                     });
                 }
             }
 
-            result.push(dayBooking);
+            result.push(daySchedule);
             iterDate = iterDate.add(1, 'd');
         }
 
@@ -102,7 +106,10 @@ export class BookingStorage {
     }
 
     private static getBooking(t: moment.Moment): Booking {
-        return bookingStorage_.get(BookingStorage.keyFrom(t));
+        return Object.assign( // clone
+            {},
+            bookingStorage_.get(BookingStorage.keyFrom(t))
+        );
     }
 
     static createBooking(timestamp: moment.Moment, booking: Booking): BookingResult {

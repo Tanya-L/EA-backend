@@ -5,7 +5,7 @@ import {SessionStorage} from "../../database/session-storage";
 const adminPasswordSalt = '$2b$10$gdj6vBRcFKFsjVJD.17uRu';
 const adminPasswordHash = '$2b$10$gdj6vBRcFKFsjVJD.17uRuJaJecCFtXrATXYnX1OGm3knzZ8BYGNe';
 
-// GET session/login
+// GET session/login?login=LLL&password=PPP
 export const sessionControllerLogin = (req: Request, res: Response, next: NextFunction) => {
     const login: string = req.query['login'];
     const password: string = req.query['password'];
@@ -24,7 +24,7 @@ export const sessionControllerLogin = (req: Request, res: Response, next: NextFu
     res.send(JSON.stringify(response));
 };
 
-// GET session/logout
+// GET session/logout?token=TTT
 export const sessionControllerLogout = (req: Request, res: Response, next: NextFunction) => {
     const token: string = req.query['token'];
     SessionStorage.deleteSession(token);
