@@ -1,4 +1,3 @@
-import bcrypt from "bcrypt";
 import moment from "moment";
 
 const MAX_SESSION_LIFE = 7 * 23 + 1; // max duration 1 week minus 1 hour
@@ -17,7 +16,8 @@ export class SessionStorage {
     }
 
     static createSession(login: string): string {
-        const token: string = bcrypt.genSaltSync(10);
+        const token: string = Math.random().toString(36).substring(2, 15)
+            + Math.random().toString(36).substring(2, 15);
         sessionStorage_.set(token, {
             login: login,
             createdAt: moment(),

@@ -1,13 +1,21 @@
 import {Module, ModuleComponent} from '@liftr/core';
-import {adminBookingRoute, bookingRoute} from './booking.routes';
+import {
+    getAdminBookingRoute,
+    getBookingRoute,
+    postBookingRoute
+} from './booking.routes';
 
 export const BookingModule: ModuleComponent = Module([
     {
-        route: bookingRoute,
+        route: getBookingRoute,
         middleware: [],
     },
     {
-        route: adminBookingRoute,
+        route: postBookingRoute,
+        middleware: [],
+    },
+    {
+        route: getAdminBookingRoute,
         middleware: [],
     },
 ]);

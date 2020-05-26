@@ -20,6 +20,7 @@ export const sessionControllerLogin = (req: Request, res: Response, next: NextFu
         response = {result: false};
     }
 
+    res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(response));
 };
 
@@ -27,6 +28,8 @@ export const sessionControllerLogin = (req: Request, res: Response, next: NextFu
 export const sessionControllerLogout = (req: Request, res: Response, next: NextFunction) => {
     const token: string = req.query['token'];
     SessionStorage.deleteSession(token);
+
+    res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({result: true}));
 };
 

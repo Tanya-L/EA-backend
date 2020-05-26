@@ -1,8 +1,10 @@
 import {Route} from '@liftr/core';
 import {
-    adminBookingGetController,
-    bookingGetController
-} from '@controllers/booking/bookingGetController';
+    getAdminBookingController,
+    getBookingController,
+    postBookingController
+} from '@controllers/booking/booking.controller';
 
-export const bookingRoute = Route.get('/', bookingGetController);
-export const adminBookingRoute = Route.get('/admin', adminBookingGetController);
+export const getBookingRoute = Route.get('/', getBookingController);
+export const postBookingRoute = Route.post('/', postBookingController);
+export const getAdminBookingRoute = Route.get('/admin', getAdminBookingController);

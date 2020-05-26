@@ -1,7 +1,7 @@
 import * as sinon from 'sinon';
 import {expect} from 'chai';
 import {NextFunction, Request, Response} from 'express';
-import {bookingGetController} from "@controllers/booking/bookingGetController";
+import {getBookingController} from "@controllers/booking/bookingGetController";
 
 
 describe('src/controllers/booking/booking.controller.ts', () => {
@@ -17,7 +17,7 @@ describe('src/controllers/booking/booking.controller.ts', () => {
     });
 
     it('should send a message', () => {
-        bookingGetController(req as Request, responseStub as Response, next as NextFunction);
+        getBookingController(req as Request, responseStub as Response, next as NextFunction);
         expect(responseStub.send).to.be.calledWith('Lift off!');
     });
 });
