@@ -1,6 +1,6 @@
-import {Request, Response, NextFunction} from 'express';
+import {NextFunction, Request, Response} from 'express';
+import bcrypt from "bcrypt";
 
-const bcrypt = require('bcrypt');
 const adminPasswordSalt = '$2b$10$gdj6vBRcFKFsjVJD.17uRu';
 const adminPasswordHash = '$2b$10$gdj6vBRcFKFsjVJD.17uRuJaJecCFtXrATXYnX1OGm3knzZ8BYGNe';
 
