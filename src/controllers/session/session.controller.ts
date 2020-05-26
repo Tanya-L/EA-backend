@@ -1,11 +1,11 @@
 import {NextFunction, Request, Response} from 'express';
 import bcrypt from "bcrypt";
+import {SessionStorage} from "../../database/session-storage";
 
 const adminPasswordSalt = '$2b$10$gdj6vBRcFKFsjVJD.17uRu';
 const adminPasswordHash = '$2b$10$gdj6vBRcFKFsjVJD.17uRuJaJecCFtXrATXYnX1OGm3knzZ8BYGNe';
 
-let sessionStorage = {};
-
+// GET session/login
 export const sessionControllerLogin = (req: Request, res: Response, next: NextFunction) => {
     const login: string = req.query['login'];
     const password: string = req.query['password'];
@@ -23,18 +23,14 @@ export const sessionControllerLogin = (req: Request, res: Response, next: NextFu
     res.send(JSON.stringify(response));
 };
 
+// GET session/logout
 export const sessionControllerLogout = (req: Request, res: Response, next: NextFunction) => {
     const token: string = req.query['token'];
-    delete sessionStorage[token];
+    SessionStorage.deleteSession(token);
     res.send(JSON.stringify({result: true}));
 };
 
 function createSession(login: string) {
-    const sessionToken = bcrypt.genSaltSync(10);
-    sessionStorage[sessionToken] = {
-        login: login,
-        createdAt: new Date(),
-    };
+    return SessionStorage.createSession(login);
     // TODO: Clean old sessions, clean if too many sessions
-    return sessionToken;
 }

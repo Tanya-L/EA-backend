@@ -15,7 +15,7 @@ app.set('port', process.env.PORT || 4000);
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
-useDocs(app, routes, swaggerInfo.descriptions, swaggerInfo.responses)
+useDocs(app, routes, swaggerInfo.descriptions, swaggerInfo.responses);
 server(app, routes);
 
 export default server;
