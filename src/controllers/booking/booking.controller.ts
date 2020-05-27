@@ -2,8 +2,8 @@ import {NextFunction, Request, Response} from 'express';
 import {BookingStorage} from "../../database/booking-storage";
 import {SessionStorage} from "../../database/session-storage";
 import moment from "moment";
-import {BookingResult} from "@controllers/booking/bookingResult";
 import {Booking, BookingImpl} from "../../database/booking";
+import {BookingResult} from "../../database/bookingResult";
 
 // GET /booking
 // Return available bookings for anonymous user

@@ -1,7 +1,7 @@
 import * as sinon from 'sinon';
 import {expect} from 'chai';
 import {NextFunction, Request, Response} from 'express';
-import {getBookingController} from "@controllers/booking/bookingGetController";
+import {getBookingController} from "@controllers/booking/booking.controller";
 
 
 describe('src/controllers/booking/booking.controller.ts', () => {

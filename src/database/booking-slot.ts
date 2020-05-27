@@ -1,3 +1,5 @@
+import {Booking} from "./booking";
+
 export interface BookingSlot {
     hour: number,
     available: boolean,
