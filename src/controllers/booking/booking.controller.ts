@@ -5,7 +5,7 @@ import moment from "moment";
 import {Booking, BookingImpl} from "../../database/booking";
 import {BookingResult} from "../../database/bookingResult";
 
-// GET /booking
+// GET /booking?week=22
 // Return available bookings for anonymous user
 // Every day is returned as DayBooking[], each containing BookingSlot[]
 export const getBookingController = (req: Request, res: Response, next: NextFunction) => {
@@ -43,7 +43,8 @@ export const postBookingController = (req: Request, resp: Response, next: NextFu
     } else {
         // Possible errors:
         //  badRequest (missing 'booking' in request)
-        //  bookingExists
+        //  inThePast -- booking in the past
+        //  bookingExists -- already booked
         //  notWorkingDay
         //  notWorkingHour
         resp.setHeader('Content-Type', 'application/json');

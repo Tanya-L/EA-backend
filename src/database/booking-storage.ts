@@ -73,12 +73,12 @@ export class BookingStorage {
                     .hour(workingHour).minute(0).second(0).millisecond(0);
 
                 const booking = BookingStorage.getBooking(iterTime);
-                delete booking['bookingCode'];
+                //delete booking['bookingCode'];
 
                 if (booking) {
                     daySchedule.slots.push({
                         hour: workingHour,
-                        available: false,
+                        available: !booking.isActive,
                         booking: booking,
                     });
                 } else {
@@ -103,7 +103,11 @@ export class BookingStorage {
     }
 
     private static checkBookingExists(t: moment.Moment): boolean {
-        return bookingStorage_.has(BookingStorage.keyFrom(t));
+        const key = BookingStorage.keyFrom(t);
+        if (!bookingStorage_.has(key)) {
+            return false;
+        }
+        return bookingStorage_.get(key).isActive;
     }
 
     private static getBooking(t: moment.Moment): Booking {
@@ -122,6 +126,10 @@ export class BookingStorage {
         // check booking not undefined
         if (!booking) {
             return new BookingResult(false, "", "badRequest");
+        }
+
+        if (timestamp.isBefore(moment())) {
+            return new BookingResult(false, "", "inThePast");
         }
 
         // check not exists? But allow if admin
@@ -172,7 +180,7 @@ export class BookingStorage {
 
         // unbook first
         if (keys.length > 0) {
-            bookingStorage_.delete(keys[0]);
+            bookingStorage_.get(keys[0]).isActive = false;
             return ""; // success
         }
 
