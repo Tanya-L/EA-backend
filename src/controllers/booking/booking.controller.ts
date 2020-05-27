@@ -3,7 +3,7 @@ import {BookingStorage} from "../../database/booking-storage";
 import {SessionStorage} from "../../database/session-storage";
 import moment from "moment";
 import {BookingResult} from "@controllers/booking/bookingResult";
-import {Booking} from "../../database/booking";
+import {Booking, BookingImpl} from "../../database/booking";
 
 // GET /booking
 // Return available bookings for anonymous user
@@ -21,23 +21,31 @@ export const getBookingController = (req: Request, res: Response, next: NextFunc
 // POST /booking -- create new booking
 // {
 //     "timestamp": "2020-05-25T00:00:00.000Z",
-//     "booking": { "name": "le chat", "comments": "", "phone": "666" }
+//     "booking": { "name": "le chat", "comments": "", "phone": "666" },
+//     "token": "asdsadasdsadas" - for admin access
 // }
 export const postBookingController = (req: Request, resp: Response, next: NextFunction) => {
     const timestamp: moment.Moment = moment(req.body['timestamp']);
+    const token: string = req.body['token'];
     const bookingReq = req.body['booking'];
-    let booking: Booking = new Booking(
+    let booking: Booking = new BookingImpl(
+        true,
         bookingReq['name'],
         bookingReq['phone'],
         bookingReq['comments'],
         "");
 
     // Admin session invalid, return anonymous available bookings
-    const result: BookingResult = BookingStorage.createBooking(timestamp, booking);
+    const result: BookingResult = BookingStorage.createBooking(timestamp, booking, token);
     if (result.ok) {
         resp.setHeader('Content-Type', 'application/json');
         resp.send(JSON.stringify({result: true, bookingCode: result.code}));
     } else {
+        // Possible errors:
+        //  badRequest (missing 'booking' in request)
+        //  bookingExists
+        //  notWorkingDay
+        //  notWorkingHour
         resp.setHeader('Content-Type', 'application/json');
         resp.send(JSON.stringify({result: false, reason: result.reason}));
     }

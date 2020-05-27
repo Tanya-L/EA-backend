@@ -2,7 +2,8 @@ import moment from "moment";
 import {ScheduleManager} from "./schedule-manager";
 import {DaySchedule, DayScheduleImpl} from "./day-schedule";
 import {BookingResult} from "./bookingResult";
-import {Booking} from "./booking";
+import {Booking, BookingImpl} from "./booking";
+import {SessionStorage} from "./session-storage";
 
 let bookingStorage_: Map<string, Booking> = new Map();
 
@@ -112,7 +113,10 @@ export class BookingStorage {
         );
     }
 
-    static createBooking(timestamp: moment.Moment, booking: Booking): BookingResult {
+    static createBooking(timestamp: moment.Moment,
+                         booking: Booking,
+                         token: string): BookingResult {
+        const isAdmin: boolean = SessionStorage.checkValid(token);
         const t = timestamp.minute(0).second(0).millisecond(0);
 
         // check booking not undefined
@@ -120,8 +124,8 @@ export class BookingStorage {
             return new BookingResult(false, "", "badRequest");
         }
 
-        // check not exists?
-        if (BookingStorage.checkBookingExists(t)) {
+        // check not exists? But allow if admin
+        if (BookingStorage.checkBookingExists(t) && !isAdmin) {
             return new BookingResult(false, "", "bookingExists");
         }
 
@@ -130,7 +134,7 @@ export class BookingStorage {
             return new BookingResult(false, "", "notWorkingDay");
         }
 
-        // check working hours
+        // check working hours?
         const openingHours = ScheduleManager.getOpeningHours(t);
         const opening = openingHours[0];
         const closing = openingHours[1];
