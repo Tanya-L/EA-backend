@@ -151,6 +151,41 @@ export class BookingStorage {
     private static generateBookingCode() {
         // Short booking code
         // TODO: Check unique code in last 3 weeks
-        return Math.random().toString(10).substring(2, 8);
+        let code: string;
+        for (;;) {
+            code = Math.random().toString(10).substring(2, 8);
+            if (!BookingStorage.bookingCodeExists(code)) {
+                break; // new unique code!
+            }
+        }
+        return code;
+    }
+
+    // Cancel a booking. Returns "" for OK, or returns reason "notExists"
+    static cancelBooking(bookingCode: string, token: string): string {
+        let keys: string[] = [];
+        bookingStorage_.forEach((b: Booking, key: string) => {
+            if (b.bookingCode == bookingCode) {
+                keys.push(key);
+            }
+        });
+
+        // unbook first
+        if (keys.length > 0) {
+            bookingStorage_.delete(keys[0]);
+            return ""; // success
+        }
+
+        return "notExists";
+    }
+
+    private static bookingCodeExists(code: string): boolean {
+        let result: boolean = false;
+        bookingStorage_.forEach((b: Booking) => {
+            if (b.bookingCode == code) {
+                result = true;
+            }
+        });
+        return result;
     }
 }

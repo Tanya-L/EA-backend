@@ -1,5 +1,6 @@
 import {Module, ModuleComponent} from '@liftr/core';
 import {
+    deleteBookingRoute,
     getAdminBookingRoute,
     getBookingRoute,
     postBookingRoute
@@ -12,6 +13,10 @@ export const BookingModule: ModuleComponent = Module([
     },
     {
         route: postBookingRoute,
+        middleware: [],
+    },
+    {
+        route: deleteBookingRoute,
         middleware: [],
     },
     {

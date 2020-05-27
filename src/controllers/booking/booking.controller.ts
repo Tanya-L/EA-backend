@@ -51,6 +51,22 @@ export const postBookingController = (req: Request, resp: Response, next: NextFu
     }
 };
 
+// DELETE /booking?token=TTTT&bookingCode=123456
+export const deleteBookingController = (req: Request, resp: Response, next: NextFunction) => {
+    const token: string = req.query['token'];
+    const bookingCode = req.query['bookingCode'];
+
+    // Admin session invalid, return anonymous available bookings
+    const reason = BookingStorage.cancelBooking(bookingCode, token);
+    if (reason === "") {
+        resp.setHeader('Content-Type', 'application/json');
+        resp.send(JSON.stringify({result: true}));
+    } else {
+        resp.setHeader('Content-Type', 'application/json');
+        resp.send(JSON.stringify({result: false, reason: reason}));
+    }
+};
+
 // GET /booking/admin
 // Return all booking slots for the week for admin, and all booking info
 export const getAdminBookingController = (req: Request, res: Response, next: NextFunction) => {
