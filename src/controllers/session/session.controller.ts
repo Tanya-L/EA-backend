@@ -7,8 +7,8 @@ const adminPasswordHash = '$2b$10$gdj6vBRcFKFsjVJD.17uRuJaJecCFtXrATXYnX1OGm3knz
 
 // GET session/login?login=LLL&password=PPP
 export const sessionControllerLogin = (req: Request, res: Response, next: NextFunction) => {
-    const login: string = req.query['login'];
-    const password: string = req.query['password'];
+    const login: string = req.query['login'].toString();
+    const password: string = req.query['password'].toString();
 
     const hash = bcrypt.hashSync(password, adminPasswordSalt);
     let response: object;
@@ -26,7 +26,7 @@ export const sessionControllerLogin = (req: Request, res: Response, next: NextFu
 
 // GET session/logout?token=TTT
 export const sessionControllerLogout = (req: Request, res: Response, next: NextFunction) => {
-    const token: string = req.query['token'];
+    const token: string = req.query['token'].toString();
     SessionStorage.deleteSession(token);
 
     res.setHeader('Content-Type', 'application/json');

@@ -12,9 +12,10 @@ import {BookingSlot} from "./bookingslot.types";
 export class BookingStorage {
     static async getAvailableSlots(weekNum: number): Promise<IDaySchedule[]> {
         const startWeek = moment().utc()
-            .week(weekNum).day(1)
+            .weekday(1).week(weekNum)
             .hour(0).minute(0).second(0).millisecond(0);
-        const endWeek = startWeek.add(7, 'd');
+        const endWeek = moment(startWeek).add(7, 'd');
+        console.log(`start=${startWeek} end=${endWeek}`);
 
         mongoConnect();
         return BookingModel.find({
@@ -53,7 +54,7 @@ export class BookingStorage {
                 );
 
                 // for each hour of the day
-                for (let workingHour = opening; workingHour <= closing; workingHour++) {
+                for (let workingHour = opening; workingHour < closing; workingHour++) {
                     let iterTime = moment(iterDate)
                         .hour(workingHour).minute(0).second(0)
                         .millisecond(0);
@@ -74,49 +75,12 @@ export class BookingStorage {
         });
     }
 
-    // static getAvailableSlots_(weekNum: number): IDaySchedule[] {
-    //     let result = [];
-    //     let iterDate = moment().utc()
-    //         .week(weekNum)
-    //         .day(1)
-    //         .hour(0).minute(0).second(0).millisecond(0);
-    //
-    //     // for each day
-    //     for (let weekDay = 0; weekDay <= 6; weekDay++) {
-    //         if (!ScheduleManager.isWorkingDay(iterDate)) {
-    //             // not a working day
-    //             continue;
-    //         }
-    //
-    //         const openingHours = ScheduleManager.getOpeningHours(iterDate);
-    //         let opening = openingHours[0];
-    //         let closing = openingHours[1];
-    //         let daySchedule = {dayDate: moment(iterDate), slots: []};
-    //
-    //         // for each hour of the day
-    //         for (let workingHour = opening; workingHour <= closing; workingHour++) {
-    //             let iterTime = moment(iterDate)
-    //                 .hour(workingHour).minute(0).second(0).millisecond(0);
-    //
-    //             daySchedule.slots.push({
-    //                 hour: workingHour,
-    //                 available: !BookingStorage.checkBookingExists(iterTime)
-    //             });
-    //         }
-    //
-    //         result.push(daySchedule);
-    //         iterDate = iterDate.add(1, 'd');
-    //     }
-    //
-    //     return result;
-    // }
-
     // Admin function: Returns all slots which are booked
     static async getAllBookings(weekNum: number): Promise<IDaySchedule[]> {
         const startWeek = moment().utc()
-            .week(weekNum).day(1)
+            .weekday(1).week(weekNum)
             .hour(0).minute(0).second(0).millisecond(0);
-        const endWeek = startWeek.add(7, 'd');
+        const endWeek = moment(startWeek).add(7, 'd');
 
         mongoConnect();
         return BookingModel.find({
@@ -154,7 +118,7 @@ export class BookingStorage {
                 );
 
                 // for each hour of the day
-                for (let workingHour = opening; workingHour <= closing; workingHour++) {
+                for (let workingHour = opening; workingHour < closing; workingHour++) {
                     let iterTime = moment(iterDate)
                         .hour(workingHour).minute(0).second(0)
                         .millisecond(0);
@@ -182,57 +146,6 @@ export class BookingStorage {
             return Promise.resolve(result);
         });
     }
-
-    // static getAllBookings_old(weekNum: number) {
-    //     let result = [];
-    //     let iterDate = moment().utc()
-    //         .week(weekNum)
-    //         .day(1)
-    //         .hour(0).minute(0).second(0).millisecond(0);
-    //
-    //     // for each day
-    //     for (let weekDay = 0; weekDay <= 6; weekDay++) {
-    //         if (!ScheduleManager.isWorkingDay(iterDate)) {
-    //             continue;
-    //         }
-    //
-    //         const openingHours = ScheduleManager.getOpeningHours(iterDate);
-    //         let opening = openingHours[0];
-    //         let closing = openingHours[1];
-    //         let daySchedule: IDaySchedule = new DaySchedule(
-    //             moment(iterDate).toISOString(),
-    //             iterDate,
-    //             []
-    //         );
-    //
-    //         // for each hour of the day
-    //         for (let workingHour = opening; workingHour < closing; workingHour++) {
-    //             let iterTime = moment(iterDate)
-    //                 .hour(workingHour).minute(0).second(0).millisecond(0);
-    //
-    //             const booking = BookingStorage.getBooking(iterTime);
-    //             //delete booking['bookingCode'];
-    //
-    //             if (booking) {
-    //                 daySchedule.slots.push({
-    //                     hour: workingHour,
-    //                     available: !booking.isActive,
-    //                     booking: booking,
-    //                 });
-    //             } else {
-    //                 daySchedule.slots.push({
-    //                     hour: workingHour,
-    //                     available: true,
-    //                 });
-    //             }
-    //         }
-    //
-    //         result.push(daySchedule);
-    //         iterDate = iterDate.add(1, 'd');
-    //     }
-    //
-    //     return result;
-    // }
 
     static keyFrom(t: moment.Moment): string {
         return t

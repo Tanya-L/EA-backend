@@ -14,7 +14,7 @@ import { BookingModel } from '../../database/booking.model';
 // Return available bookings for anonymous user
 // Every day is returned as DayBooking[], each containing BookingSlot[]
 export const getBookingController = async (req: Request, res: Response, next: NextFunction) => {
-    const weekNum: number = parseInt(req.query['week']);
+    const weekNum: number = parseInt(req.query['week'].toString());
 
     // Admin session invalid, return anonymous available bookings
     return BookingStorage.getAvailableSlots(weekNum)
@@ -70,8 +70,8 @@ export const postBookingController = async (req: Request, resp: Response, next: 
 
 // DELETE /booking?token=TTTT&bookingCode=123456
 export const deleteBookingController = async (req: Request, resp: Response, next: NextFunction) => {
-    const token: string = req.query['token'];
-    const bookingCode = req.query['bookingCode'];
+    const token: string = req.query['token'] ? req.query['token'].toString() : "";
+    const bookingCode: string = req.query['bookingCode'].toString();
 
     // Admin session invalid, return anonymous available bookings
     return BookingStorage.cancelBooking(bookingCode, token)
@@ -89,8 +89,8 @@ export const deleteBookingController = async (req: Request, resp: Response, next
 // GET /booking/admin
 // Return all booking slots for the week for admin, and all booking info
 export const getAdminBookingController = async (req: Request, res: Response, next: NextFunction) => {
-    const weekNum: number = parseInt(req.query['week']);
-    const sessionToken: string = req.query['token'];
+    const weekNum: number = parseInt(req.query['week'].toString());
+    const sessionToken: string = req.query['token'].toString();
 
     if (SessionStorage.checkValid(sessionToken)) {
         // Admin session is valid, return everything
