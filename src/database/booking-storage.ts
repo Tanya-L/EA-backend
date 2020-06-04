@@ -1,100 +1,238 @@
+import {model} from "mongoose";
 import moment from "moment";
 import {ScheduleManager} from "./schedule-manager";
-import {DaySchedule, DayScheduleImpl} from "./day-schedule";
-import {BookingResult} from "./bookingResult";
-import {Booking, BookingImpl} from "./booking";
+import {DaySchedule, IDaySchedule} from "./day-schedule";
+import {BookingResult} from "./bookingresult.types";
+import {IBooking, IBookingDocument} from "./booking.types";
 import {SessionStorage} from "./session-storage";
-
-let bookingStorage_: Map<string, Booking> = new Map();
+import {BookingModel} from "./booking.model";
+import {mongoConnect} from "./db";
+import {BookingSlot} from "./bookingslot.types";
 
 export class BookingStorage {
-    static getAvailableSlots(weekNum: number): DaySchedule[] {
-        let result = [];
-        let iterDate = moment().utc()
-            .week(weekNum)
-            .day(1)
+    static async getAvailableSlots(weekNum: number): Promise<IDaySchedule[]> {
+        const startWeek = moment().utc()
+            .week(weekNum).day(1)
             .hour(0).minute(0).second(0).millisecond(0);
+        const endWeek = startWeek.add(7, 'd');
 
-        // for each day
-        for (let weekDay = 0; weekDay <= 6; weekDay++) {
-            if (!ScheduleManager.isWorkingDay(iterDate)) {
-                // not a working day
-                continue;
+        mongoConnect();
+        return BookingModel.find({
+            age: {
+                $gte: startWeek.toDate() || 0,
+                $lt: endWeek.toDate() || Infinity
+            }
+        }).then(async (docsList) => {
+            // Take list from Mongo for the given week, and map them using hourKey
+            // as a key for quick search. Max 40 records per week should be fast.
+            let docsMap: Map<string, IBooking> = new Map();
+            docsList.forEach(d => {
+                if (d.isActive) {
+                    docsMap[d.hourKey] = d;
+                }
+            });
+
+            let result: IDaySchedule[] = [];
+            let iterDate = startWeek;
+            const momentNow = moment();
+
+            // for each day
+            for (let weekDay = 0; weekDay <= 6; weekDay++) {
+                if (!ScheduleManager.isWorkingDay(iterDate)) {
+                    // not a working day
+                    continue;
+                }
+
+                const openingHours = ScheduleManager.getOpeningHours(iterDate);
+                let opening = openingHours[0];
+                let closing = openingHours[1];
+                let daySchedule: IDaySchedule = new DaySchedule(
+                    moment(iterDate).toISOString(),
+                    iterDate,
+                    []
+                );
+
+                // for each hour of the day
+                for (let workingHour = opening; workingHour <= closing; workingHour++) {
+                    let iterTime = moment(iterDate)
+                        .hour(workingHour).minute(0).second(0)
+                        .millisecond(0);
+
+                    const taken = await BookingStorage.checkBookingExists(iterTime);
+                    const inThePast = momentNow.isAfter(iterTime);
+                    daySchedule.slots.push(new BookingSlot(
+                        !taken && !inThePast,
+                        null,
+                        workingHour));
+                }
+
+                result.push(daySchedule);
+                iterDate = iterDate.add(1, 'd');
             }
 
-            const openingHours = ScheduleManager.getOpeningHours(iterDate);
-            let opening = openingHours[0];
-            let closing = openingHours[1];
-            let daySchedule = {dayDate: moment(iterDate), slots: []};
-
-            // for each hour of the day
-            for (let workingHour = opening; workingHour <= closing; workingHour++) {
-                let iterTime = moment(iterDate)
-                    .hour(workingHour).minute(0).second(0).millisecond(0);
-
-                daySchedule.slots.push({
-                    hour: workingHour,
-                    available: !BookingStorage.checkBookingExists(iterTime)
-                });
-            }
-
-            result.push(daySchedule);
-            iterDate = iterDate.add(1, 'd');
-        }
-
-        return result;
+            return Promise.resolve(result);
+        });
     }
+
+    // static getAvailableSlots_(weekNum: number): IDaySchedule[] {
+    //     let result = [];
+    //     let iterDate = moment().utc()
+    //         .week(weekNum)
+    //         .day(1)
+    //         .hour(0).minute(0).second(0).millisecond(0);
+    //
+    //     // for each day
+    //     for (let weekDay = 0; weekDay <= 6; weekDay++) {
+    //         if (!ScheduleManager.isWorkingDay(iterDate)) {
+    //             // not a working day
+    //             continue;
+    //         }
+    //
+    //         const openingHours = ScheduleManager.getOpeningHours(iterDate);
+    //         let opening = openingHours[0];
+    //         let closing = openingHours[1];
+    //         let daySchedule = {dayDate: moment(iterDate), slots: []};
+    //
+    //         // for each hour of the day
+    //         for (let workingHour = opening; workingHour <= closing; workingHour++) {
+    //             let iterTime = moment(iterDate)
+    //                 .hour(workingHour).minute(0).second(0).millisecond(0);
+    //
+    //             daySchedule.slots.push({
+    //                 hour: workingHour,
+    //                 available: !BookingStorage.checkBookingExists(iterTime)
+    //             });
+    //         }
+    //
+    //         result.push(daySchedule);
+    //         iterDate = iterDate.add(1, 'd');
+    //     }
+    //
+    //     return result;
+    // }
 
     // Admin function: Returns all slots which are booked
-    static getAllBookings(weekNum: number) {
-        let result = [];
-        let iterDate = moment().utc()
-            .week(weekNum)
-            .day(1)
+    static async getAllBookings(weekNum: number): Promise<IDaySchedule[]> {
+        const startWeek = moment().utc()
+            .week(weekNum).day(1)
             .hour(0).minute(0).second(0).millisecond(0);
+        const endWeek = startWeek.add(7, 'd');
 
-        // for each day
-        for (let weekDay = 0; weekDay <= 6; weekDay++) {
-            if (!ScheduleManager.isWorkingDay(iterDate)) {
-                continue;
+        mongoConnect();
+        return BookingModel.find({
+            age: {
+                $gte: startWeek.toDate() || 0,
+                $lt: endWeek.toDate() || Infinity
             }
-
-            const openingHours = ScheduleManager.getOpeningHours(iterDate);
-            let opening = openingHours[0];
-            let closing = openingHours[1];
-            let daySchedule: DaySchedule = new DayScheduleImpl(
-                moment(iterDate).toISOString(),
-                []
-            );
-
-            // for each hour of the day
-            for (let workingHour = opening; workingHour < closing; workingHour++) {
-                let iterTime = moment(iterDate)
-                    .hour(workingHour).minute(0).second(0).millisecond(0);
-
-                const booking = BookingStorage.getBooking(iterTime);
-                //delete booking['bookingCode'];
-
-                if (booking) {
-                    daySchedule.slots.push({
-                        hour: workingHour,
-                        available: !booking.isActive,
-                        booking: booking,
-                    });
-                } else {
-                    daySchedule.slots.push({
-                        hour: workingHour,
-                        available: true,
-                    });
+        }).then(async (docsList) => {
+            // Take list from Mongo for the given week, and map them using hourKey
+            // as a key for quick search. Max 40 records per week should be fast.
+            let docsMap: Map<string, IBooking> = new Map();
+            docsList.forEach(d => {
+                if (d.isActive) {
+                    docsMap[d.hourKey] = d;
                 }
+            });
+
+            let result: IDaySchedule[] = [];
+            let iterDate = startWeek;
+
+            // for each day
+            for (let weekDay = 0; weekDay <= 6; weekDay++) {
+                if (!ScheduleManager.isWorkingDay(iterDate)) {
+                    // not a working day
+                    continue;
+                }
+
+                const openingHours = ScheduleManager.getOpeningHours(iterDate);
+                let opening = openingHours[0];
+                let closing = openingHours[1];
+                let daySchedule: IDaySchedule = new DaySchedule(
+                    moment(iterDate).toISOString(),
+                    iterDate,
+                    []
+                );
+
+                // for each hour of the day
+                for (let workingHour = opening; workingHour <= closing; workingHour++) {
+                    let iterTime = moment(iterDate)
+                        .hour(workingHour).minute(0).second(0)
+                        .millisecond(0);
+
+                    let booking = await BookingStorage.getBooking(iterTime);
+
+                    if (booking !== null) {
+                        daySchedule.slots.push({
+                            hour: workingHour,
+                            available: !booking.isActive,
+                            booking: booking,
+                        });
+                    } else {
+                        daySchedule.slots.push({
+                            hour: workingHour,
+                            available: true,
+                        });
+                    }
+                }
+
+                result.push(daySchedule);
+                iterDate = iterDate.add(1, 'd');
             }
 
-            result.push(daySchedule);
-            iterDate = iterDate.add(1, 'd');
-        }
-
-        return result;
+            return Promise.resolve(result);
+        });
     }
+
+    // static getAllBookings_old(weekNum: number) {
+    //     let result = [];
+    //     let iterDate = moment().utc()
+    //         .week(weekNum)
+    //         .day(1)
+    //         .hour(0).minute(0).second(0).millisecond(0);
+    //
+    //     // for each day
+    //     for (let weekDay = 0; weekDay <= 6; weekDay++) {
+    //         if (!ScheduleManager.isWorkingDay(iterDate)) {
+    //             continue;
+    //         }
+    //
+    //         const openingHours = ScheduleManager.getOpeningHours(iterDate);
+    //         let opening = openingHours[0];
+    //         let closing = openingHours[1];
+    //         let daySchedule: IDaySchedule = new DaySchedule(
+    //             moment(iterDate).toISOString(),
+    //             iterDate,
+    //             []
+    //         );
+    //
+    //         // for each hour of the day
+    //         for (let workingHour = opening; workingHour < closing; workingHour++) {
+    //             let iterTime = moment(iterDate)
+    //                 .hour(workingHour).minute(0).second(0).millisecond(0);
+    //
+    //             const booking = BookingStorage.getBooking(iterTime);
+    //             //delete booking['bookingCode'];
+    //
+    //             if (booking) {
+    //                 daySchedule.slots.push({
+    //                     hour: workingHour,
+    //                     available: !booking.isActive,
+    //                     booking: booking,
+    //                 });
+    //             } else {
+    //                 daySchedule.slots.push({
+    //                     hour: workingHour,
+    //                     available: true,
+    //                 });
+    //             }
+    //         }
+    //
+    //         result.push(daySchedule);
+    //         iterDate = iterDate.add(1, 'd');
+    //     }
+    //
+    //     return result;
+    // }
 
     static keyFrom(t: moment.Moment): string {
         return t
@@ -102,44 +240,58 @@ export class BookingStorage {
             .format("YYYYMMDD-HHmm");
     }
 
-    private static checkBookingExists(t: moment.Moment): boolean {
-        const key = BookingStorage.keyFrom(t);
-        if (!bookingStorage_.has(key)) {
-            return false;
-        }
-        return bookingStorage_.get(key).isActive;
+    // Given: Mapped hour bookings for the current week, using hourKey as key
+    // Finds if moment t is booked, and isActive is true
+    private static async checkBookingExists(t: moment.Moment): Promise<boolean> {
+        return BookingModel.find({hourKey: BookingStorage.keyFrom(t)})
+            .then(docs => {
+                if (docs.length > 0) {
+                    return Promise.resolve(docs[0].isActive);
+                }
+                return Promise.resolve(false);
+            });
     }
 
-    private static getBooking(t: moment.Moment): Booking {
-        return Object.assign( // clone
-            {},
-            bookingStorage_.get(BookingStorage.keyFrom(t))
-        );
+    private static async getBooking(t: moment.Moment): Promise<IBookingDocument> {
+        return BookingModel.find({hourKey: BookingStorage.keyFrom(t)})
+            .then(docs => {
+                if (docs.length > 0) {
+                    return Promise.resolve(docs[0]);
+                }
+                return Promise.resolve(null);
+            });
     }
 
-    static createBooking(timestamp: moment.Moment,
-                         booking: Booking,
-                         token: string): BookingResult {
+    static async createBooking(timestamp: moment.Moment,
+                               booking: model<IBookingDocument>,
+                               token: string): Promise<BookingResult> {
+        mongoConnect();
+
         const isAdmin: boolean = SessionStorage.checkValid(token);
         const t = timestamp.minute(0).second(0).millisecond(0);
 
         // check booking not undefined
         if (!booking) {
-            return new BookingResult(false, "", "badRequest");
+            const notOk = new BookingResult(false, "", "badRequest");
+            return Promise.resolve(notOk);
         }
 
         if (timestamp.isBefore(moment())) {
-            return new BookingResult(false, "", "inThePast");
+            const notOk = new BookingResult(false, "", "inThePast");
+            return Promise.resolve(notOk);
         }
 
         // check not exists? But allow if admin
-        if (BookingStorage.checkBookingExists(t) && !isAdmin) {
-            return new BookingResult(false, "", "bookingExists");
+        const bookingExists = await BookingStorage.checkBookingExists(t);
+        if (bookingExists && !isAdmin) {
+            const notOk = new BookingResult(false, "", "bookingExists");
+            return Promise.resolve(notOk);
         }
 
         // check working day?
         if (!ScheduleManager.isWorkingDay(t)) {
-            return new BookingResult(false, "", "notWorkingDay");
+            const notOk = new BookingResult(false, "", "notWorkingDay");
+            return Promise.resolve(notOk);
         }
 
         // check working hours?
@@ -147,53 +299,54 @@ export class BookingStorage {
         const opening = openingHours[0];
         const closing = openingHours[1];
         if (t.hour() < opening || t.hour() >= closing) {
-            return new BookingResult(false, "", "notWorkingHour");
+            const notOk = new BookingResult(false, "", "notWorkingHour");
+            return Promise.resolve(notOk);
         }
 
-        booking.bookingCode = BookingStorage.generateBookingCode();
-        bookingStorage_.set(BookingStorage.keyFrom(t), booking);
+        booking.bookingCode = await BookingStorage.generateBookingCode();
+        booking.hourKey = BookingStorage.keyFrom(t);
 
-        return new BookingResult(true, booking.bookingCode, "");
+        return booking.save()
+            .then(_ => new BookingResult(true, booking.bookingCode, ""))
+            .catch(_ => new BookingResult(false, booking.bookingCode, "saveFailed"));
     }
 
-    private static generateBookingCode() {
+    private static async generateBookingCode() {
         // Short booking code
         // TODO: Check unique code in last 3 weeks
         let code: string;
-        for (;;) {
+        for (; ;) {
             code = Math.random().toString(10).substring(2, 8);
-            if (!BookingStorage.bookingCodeExists(code)) {
-                break; // new unique code!
+            const exists = await BookingStorage.bookingCodeExists(code);
+            if (!exists) {
+                return code; // new unique code!
             }
         }
-        return code;
     }
 
     // Cancel a booking. Returns "" for OK, or returns reason "notExists"
-    static cancelBooking(bookingCode: string, token: string): string {
-        let keys: string[] = [];
-        bookingStorage_.forEach((b: Booking, key: string) => {
-            if (b.bookingCode == bookingCode) {
-                keys.push(key);
-            }
+    static async cancelBooking(bookingCode: string, token: string): Promise<string> {
+        mongoConnect();
+        const keyPrefix = this.keyFrom(moment()); // can only cancel in the future
+
+        return BookingModel.findOneAndRemove({
+            bookingCode: bookingCode,
+            hourKey: {$gte: keyPrefix}
+        }).then(_ => {
+            return "";
+        }).catch(_ => {
+            return "notExists";
         });
-
-        // unbook first
-        if (keys.length > 0) {
-            bookingStorage_.get(keys[0]).isActive = false;
-            return ""; // success
-        }
-
-        return "notExists";
     }
 
-    private static bookingCodeExists(code: string): boolean {
-        let result: boolean = false;
-        bookingStorage_.forEach((b: Booking) => {
-            if (b.bookingCode == code) {
-                result = true;
-            }
+    private static async bookingCodeExists(code: string): Promise<boolean> {
+        const keyPrefix = this.keyFrom(moment()); // can only cancel in the future
+
+        return BookingModel.find({
+            bookingCode: code,
+            hourKey: {$gte: keyPrefix}
+        }).then(bookings => {
+            return Promise.resolve(bookings.length > 0);
         });
-        return result;
     }
 }
