@@ -10,10 +10,10 @@ export class ScheduleManager {
     static getOpeningHours(date: moment.Moment): number[] {
         let day = date.day();
         if (day == 1 || day == 3) { // Mo, We
-            return [8, 21];
+            return [8-2, 21-2]; // correction for UTC
         }
         if (day == 2 || day == 4 || day == 5) { // Tu, Th, Fr
-            return [8, 16];
+            return [8-2, 16-2]; // correction for UTC
         }
 
         return []; // closed

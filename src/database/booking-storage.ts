@@ -100,6 +100,7 @@ export class BookingStorage {
 
             let result: IDaySchedule[] = [];
             let iterDate = startWeek;
+            const momentNow = moment();
 
             // for each day
             for (let weekDay = 0; weekDay <= 6; weekDay++) {
@@ -124,17 +125,18 @@ export class BookingStorage {
                         .millisecond(0);
 
                     let booking = await BookingStorage.getBooking(iterTime);
+                    const inThePast = momentNow.isAfter(iterTime);
 
                     if (booking !== null) {
                         daySchedule.slots.push({
                             hour: workingHour,
-                            available: !booking.isActive,
+                            available: !booking.isActive && !inThePast,
                             booking: booking,
                         });
                     } else {
                         daySchedule.slots.push({
                             hour: workingHour,
-                            available: true,
+                            available: !inThePast,
                         });
                     }
                 }
@@ -211,13 +213,14 @@ export class BookingStorage {
         const openingHours = ScheduleManager.getOpeningHours(t);
         const opening = openingHours[0];
         const closing = openingHours[1];
-        if (t.hour() < opening || t.hour() >= closing) {
+        if (t.hour()  < opening || t.hour() >= closing) {
             const notOk = new BookingResult(false, "", "notWorkingHour");
             return Promise.resolve(notOk);
         }
 
         booking.bookingCode = await BookingStorage.generateBookingCode();
         booking.hourKey = BookingStorage.keyFrom(t);
+        console.log(JSON.stringify(booking));
 
         return booking.save()
             .then(_ => new BookingResult(true, booking.bookingCode, ""))
