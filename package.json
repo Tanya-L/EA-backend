@@ -33,7 +33,7 @@
     "express": "^4.17.1",
     "moment": "^2.26.0",
     "mongoose": "^5.9.17",
-    "tsconfig-paths": "^3.6.0"
+    "tsconfig-paths": "^3.10.1"
   },
   "devDependencies": {
     "@liftr/tscov": "^1.4.7",
